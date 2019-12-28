@@ -2,13 +2,9 @@
 using AsgardApi.Repository.Entities;
 using AsgardApi.Service.Helpers;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Security.Claims;
-using System.Text;
 
 namespace AsgardApi.Service.Services
 {
@@ -20,6 +16,7 @@ namespace AsgardApi.Service.Services
         User Create(User user, string password);
         void Update(User user, string password = null);
         void Delete(int id);
+        void PromoteAdmin(int id);
     }
     public class UserService : IUserService
     {
@@ -39,7 +36,7 @@ namespace AsgardApi.Service.Services
 
             var user = _context.Users.SingleOrDefault(x => x.Email == email);
 
-            // check if username exists
+            // check if email exists
             if (user == null)
                 return null;
 
@@ -75,6 +72,9 @@ namespace AsgardApi.Service.Services
 
             user.PasswordHash = passwordHash;
             user.PasswordSalt = passwordSalt;
+
+            user.Role = Role.User;
+            user.Active = true;
 
             _context.Users.Add(user);
             _context.SaveChanges();
@@ -125,9 +125,23 @@ namespace AsgardApi.Service.Services
             var user = _context.Users.Find(id);
             if (user != null)
             {
-                _context.Users.Remove(user);
+                user.Active = false;
+                _context.Users.Update(user);
                 _context.SaveChanges();
             }
+        }
+
+        public void PromoteAdmin(int id)
+        {
+            var user = _context.Users.Find(id);
+
+            if (user == null)
+                throw new AppException("User not found");
+
+            user.Role = Role.Admin;
+
+            _context.Users.Update(user);
+            _context.SaveChanges();
         }
 
 

@@ -87,7 +87,6 @@ namespace AsgardApi.Web.Controllers
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Role = Role.User,
                 Token = tokenString
             });
         }
@@ -143,6 +142,14 @@ namespace AsgardApi.Web.Controllers
         public IActionResult Delete(int id)
         {
             _userService.Delete(id);
+            return Ok();
+        }
+
+        [HttpPut("promote/{id}")]
+        [Authorize(Roles = Role.Admin)]
+        public IActionResult PromoteAdmin(int id)
+        {
+            _userService.PromoteAdmin(id);
             return Ok();
         }
     }
