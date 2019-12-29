@@ -1,5 +1,6 @@
 ﻿using AsgardApi.Repository.Databases;
 using AsgardApi.Repository.Entities;
+using AsgardApi.Repository.Repositories;
 using AsgardApi.Service.Helpers;
 using Microsoft.Extensions.Options;
 using System;
@@ -20,13 +21,11 @@ namespace AsgardApi.Service.Services
     }
     public class UserService : IUserService
     {
-        private readonly AppSettings _appSettings;
-        private ApplicationDbContext _context;
+        private IUserRepository _userRepository;
 
-        public UserService(IOptions<AppSettings> appSettings, ApplicationDbContext context)
+        public UserService(IUserRepository userRepository)
         {
-            _appSettings = appSettings.Value;
-            _context = context;
+            _userRepository = userRepository;
         }
 
         public User Authenticate(string email, string password)
@@ -34,7 +33,7 @@ namespace AsgardApi.Service.Services
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
                 return null;
 
-            var user = _context.Users.SingleOrDefault(x => x.Email == email);
+            var user = _userRepository.GetUserByEmail(email);
 
             // check if email exists
             if (user == null)
@@ -50,12 +49,12 @@ namespace AsgardApi.Service.Services
 
         public IEnumerable<User> GetAll()
         {
-            return _context.Users;
+            return _userRepository.GetAllUsers();
         }
 
         public User GetById(int id)
         {
-            return _context.Users.Find(id);
+            return _userRepository.GetUserById(id);
         }
 
         public User Create(User user, string password)
@@ -64,7 +63,7 @@ namespace AsgardApi.Service.Services
             if (string.IsNullOrWhiteSpace(password))
                 throw new AppException("Password is required");
 
-            if (_context.Users.Any(x => x.Email == user.Email))
+            if (_userRepository.UserExists(user.Email))
                 throw new AppException("Email \"" + user.Email + "\" is already taken");
 
             byte[] passwordHash, passwordSalt;
@@ -76,15 +75,14 @@ namespace AsgardApi.Service.Services
             user.Role = Role.User;
             user.Active = true;
 
-            _context.Users.Add(user);
-            _context.SaveChanges();
+            _userRepository.AddUser(user);
 
             return user;
         }
 
         public void Update(User userParam, string password = null)
         {
-            var user = _context.Users.Find(userParam.Id);
+            var user = _userRepository.GetUserById(userParam.Id);
 
             if (user == null)
                 throw new AppException("User not found");
@@ -93,7 +91,7 @@ namespace AsgardApi.Service.Services
             if (!string.IsNullOrWhiteSpace(userParam.Email) && userParam.Email != user.Email)
             {
                 // throw error if the new email is already taken
-                if (_context.Users.Any(x => x.Email == userParam.Email))
+                if (_userRepository.UserExists(userParam.Email))
                     throw new AppException("Email " + userParam.Email + " is already taken");
 
                 user.Email = userParam.Email;
@@ -116,32 +114,29 @@ namespace AsgardApi.Service.Services
                 user.PasswordSalt = passwordSalt;
             }
 
-            _context.Users.Update(user);
-            _context.SaveChanges();
+            _userRepository.UpdateUser(user);
         }
 
         public void Delete(int id)
         {
-            var user = _context.Users.Find(id);
+            var user = _userRepository.GetUserById(id);
             if (user != null)
             {
                 user.Active = false;
-                _context.Users.Update(user);
-                _context.SaveChanges();
+                _userRepository.UpdateUser(user);
             }
         }
 
         public void PromoteAdmin(int id)
         {
-            var user = _context.Users.Find(id);
+            var user = _userRepository.GetUserById(id);
 
             if (user == null)
                 throw new AppException("User not found");
 
             user.Role = Role.Admin;
 
-            _context.Users.Update(user);
-            _context.SaveChanges();
+            _userRepository.UpdateUser(user);
         }
 
 

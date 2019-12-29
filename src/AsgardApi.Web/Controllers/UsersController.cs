@@ -15,6 +15,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
+using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace AsgardApi.Web.Controllers
 {
@@ -26,15 +28,18 @@ namespace AsgardApi.Web.Controllers
         private IUserService _userService;
         private IMapper _mapper;
         private readonly AppSettings _appSettings;
+        private readonly ILogger<UsersController> _logger;
 
         public UsersController(
             IUserService userService,
             IMapper mapper,
-            IOptions<AppSettings> appSettings)
+            IOptions<AppSettings> appSettings,
+            ILogger<UsersController> logger)
         {
             _userService = userService;
             _mapper = mapper;
             _appSettings = appSettings.Value;
+            _logger = logger;
         }
 
         [AllowAnonymous]
@@ -48,10 +53,12 @@ namespace AsgardApi.Web.Controllers
             {
                 // create user
                 _userService.Create(user, model.Password);
+                _logger.LogInformation("New user created, {User}", model.Email);
                 return Ok();
             }
             catch (AppException ex)
             {
+                _logger.LogError("Error creating new user, {User}", model.Email);
                 // return error message if there was an exception
                 return BadRequest(new { message = ex.Message });
             }

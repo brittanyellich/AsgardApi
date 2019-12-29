@@ -15,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 using AsgardApi.Service.Services;
 using System;
 using System.Threading.Tasks;
+using AsgardApi.Repository.Repositories;
 
 namespace AsgardApi.Web
 {
@@ -84,6 +85,7 @@ namespace AsgardApi.Web
 
             // configure DI for application services
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IUserRepository, UserRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
